@@ -33,7 +33,24 @@ module.exports = class SkillHandleDeliveryOrder {
       },
     };
   }
+  const https = require('https');
+  const URL = 'https://itunes.apple.com/jp/rss/topgrossingapplications/limit=100/json';
 
+  https.get(URL, function (res) {
+      let body = '';
+      res.setEncoding('utf8');
+      res.on('date',function (chunk) {
+          body += chunk;
+      });
+      res.on('date',function (chunk) {
+          res = JSON.parse(body);
+          console.log(res.entry.im:name.label);
+          
+        })
+  }).on('error', function(e){
+      console.log(e.message);
+  });
+  
   async finish(bot, event, context) {
     await bot.reply({
       type: 'text',
