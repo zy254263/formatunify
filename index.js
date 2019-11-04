@@ -1,76 +1,75 @@
-// -----------------------------------------------------------------------------
-// モジュールのインポート
-const server = require('express')();
-const line = require('@line/bot-sdk'); // Messaging APIのSDKをインポート
-const dialogflow = require('dialogflow');
+"use strict";
 
-// -----------------------------------------------------------------------------
-// パラメータ設定
-const lineConfig = {
-  channelAccessToken: process.env.LINE_ACCESS_TOKEN, // 環境変数からアクセストークンをセットしています
-  channelSecret: process.env.LINE_CHANNEL_SECRET, // 環境変数からChannel Secretをセットしています
-};
+/** 
+ * Import Packages
+ */
+const server = require("express")();
+const bot_express = require("bot-express");
 
-// -----------------------------------------------------------------------------
-// Webサーバー設定
-server.listen(process.env.PORT || 3000);
-
-const bot = new line.Client(lineConfig);
-
-// Dialogflowのクライアントインスタンスを作成
-const sessionClient = new dialogflow.SessionsClient({
-  project_id: process.env.GOOGLE_PROJECT_ID,
-  credentials: {
-    client_email: process.env.GOOGLE_CLIENT_EMAIL,
-    private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-  },
+/** 
+ * Middleware Configuration
+ */
+server.listen(process.env.PORT || 5000, () => {
+    console.log("server is running...");
 });
 
-// -----------------------------------------------------------------------------
-// ルーター設定
-server.post('/bot/webhook', line.middleware(lineConfig), (req, res, next) => {
-  res.sendStatus(200);
-  console.log(req.body);
-
-  // すべてのイベント処理のプロミスを格納する配列。
-  // eslint-disable-next-line prefer-const
-  let eventsProcessed = [];
-
-  // イベントオブジェクトを順次処理。
-  req.body.events.forEach((event) => {
-    // この処理の対象をイベントタイプがメッセージで、かつ、テキストタイプだった場合に限定。
-    if (event.type === 'message' && event.message.type === 'text') {
-      eventsProcessed.push(
-        sessionClient.detectIntent({
-          session: sessionClient.sessionPath(process.env.GOOGLE_PROJECT_ID, event.source.userId),
-          queryInput: {
-            text: {
-              text: event.message.text,
-              languageCode: 'ja',
-            },
-          },
-        }).then((responses) => {
-          if (responses[0].queryResult && responses[0].queryResult.action === 'searchRanking') {
-            let messageText;
-            if (responses[0].queryResult.parameters.fields.ranking.stringValue) {
-              messageText = `毎度！${responses[0].queryResult.parameters.fields.ranking.stringValue}ね。どちらにお届けしましょ？`;
-            } else {
-              messageText = '毎度！ご注文は？';
-            }
-            return bot.replyMessage(event.replyToken, {
-              type: 'text',
-              text: messageText,
-            });
-          }
-        }),
-      );
-    }
-  });
-
-  // すべてのイベント処理が終了したら何個のイベントが処理されたか出力。
-  Promise.all(eventsProcessed).then(
-    (response) => {
-      console.log(`${response.length} event(s) processed.`);
+/** 
+ * Mount bot-express
+ */
+server.use("/bot/webhook", bot_express({
+    language: "ja",
+    messenger: {
+        line: {
+            channel_id: process.env.LINE_BOT_CHANNEL_ID,
+            channel_secret: process.env.LINE_BOT_CHANNEL_SECRET
+        }
     },
-  );
-});
+    nlu: {
+        type: "dialogflow",
+        options: {
+            project_id: process.env.GOOGLE_PROJECT_ID,
+            client_email: process.env.GOOGLE_CLIENT_EMAIL,
+            private_key: process.env.GOOGLE_PRIVATE_KEY,
+            language: "ja"
+        }
+    },
+    parser: [{
+        type: "dialogflow",
+        options: {
+            project_id: process.env.GOOGLE_PROJECT_ID,
+            client_email: process.env.GOOGLE_CLIENT_EMAIL,
+            private_key: process.env.GOOGLE_PRIVATE_KEY,
+            language: "ja"
+        }
+    }],
+    memory: {
+        type: process.env.MEMORY_TYPE || "memory-cache", // memory-cache | redis
+        retention: Number(process.env.MEMORY_RETENTION),
+        options: {
+            url: process.env.REDIS_URL
+        }
+    },
+    translator: {
+        type: "google",
+        enable_lang_detection: false,
+        enable_translation: false,
+        options: {
+            project_id: process.env.GOOGLE_PROJECT_ID,
+            client_email: process.env.GOOGLE_CLIENT_EMAIL,
+            private_key: process.env.GOOGLE_PRIVATE_KEY
+        }
+    },
+    logger: {
+        type: process.env.LOGGER_TYPE || "stdout", // stdout | firestore
+        options: { // Options for firestore.
+            project_id: process.env.FIREBASE_PROJECT_ID,
+            client_email: process.env.FIREBASE_CLIENT_EMAIL,
+            private_key: process.env.FIREBASE_PRIVATE_KEY,
+        }
+    },
+    skill: {
+        default: process.env.DEFAULT_SKILL
+    }
+}));
+
+module.exports = server;
