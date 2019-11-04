@@ -52,8 +52,8 @@ server.post('/bot/webhook', line.middleware(lineConfig), (req, res, next) => {
         }).then((responses) => {
           if (responses[0].queryResult && responses[0].queryResult.action === 'searchRanking') {
             let messageText;
-            if (responses[0].queryResult.parameters.fields.menu.stringValue) {
-              messageText = `毎度！${responses[0].queryResult.parameters.fields.menu.stringValue}ね。どちらにお届けしましょ？`;
+            if (responses[0].queryResult.parameters.fields.ranking.stringValue) {
+              messageText = `毎度！${responses[0].queryResult.parameters.fields.ranking.stringValue}ね。どちらにお届けしましょ？`;
             } else {
               messageText = '毎度！ご注文は？';
             }
