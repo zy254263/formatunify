@@ -31,11 +31,11 @@ server.post('/bot/webhook', line.middleware(lineConfig), (req, res, next) => {
     // この処理の対象をイベントタイプがメッセージで、かつ、テキストタイプだった場合に限定。
     if (event.type === 'message' && event.message.type === 'text') {
       // ユーザーからのテキストメッセージが「こんにちは」だった場合のみ反応。
-      if (event.message.text === 'こんにちは') {
+      if (event.message.text === 'NHKを') {
         // replyMessage()で返信し、そのプロミスをevents_processedに追加。
         eventsProcessed.push(bot.replyMessage(event.replyToken, {
           type: 'text',
-          text: 'これはこれは',
+          text: 'ぶっ壊す！',
         }));
       }
     }
